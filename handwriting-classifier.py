@@ -13,7 +13,7 @@ num_of_classes = 10
 (features_train, labels_train), (features_test, labels_test) = mnist.load_data()
 
 features_train = features_train.reshape(features_train.shape[0], pixel_width, pixel_height, 1)
-features_test = features_train.reshape(features_train.shape[0], pixel_width, pixel_height, 1)
+features_test = features_test.reshape(features_test.shape[0], pixel_width, pixel_height, 1)
 
 input_shape = (pixel_width, pixel_height, 1)
 
@@ -28,20 +28,14 @@ labels_test = keras.utils.to_categorical(labels_test, num_of_classes)
 
 model = Sequential()
 model.add(Conv2D(32, kernel_size=(3,3), activation='relu', input_shape=input_shape))
-print("POST Conv2D: ", model.output_shape)
 model.add(MaxPooling2D(pool_size=(2,2)))
-print("POST MaxPooling2D: ", model.output_shape)
 model.add(Dropout(0.25))
-print("POST Dropout: ", model.output_shape)
 model.add(Flatten())
-print("POST Flatten: ", model.output_shape)
 model.add(Dense(128, activation='relu'))
-print("POST Dense: ", model.output_shape)
 model.add(Dense(num_of_classes, activation='softmax'))
-print("POST Dense Softmax: ", model.output_shape)
 
-model.compile(loss='keras.losses.categorical_crossentropy',
-              optimizer='keras.optimizer.Adadelta()',
+model.compile(loss=keras.losses.categorical_crossentropy,
+              optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
 model.fit(features_train, labels_train,
@@ -52,4 +46,16 @@ model.fit(features_train, labels_train,
 
 score = model.evaluate(features_test, labels_test, verbose=0)
 
-print(score[0])
+model.save('/Users/Johnathan/Desktop/handwriting-classifier.h5')
+
+
+import coremltools
+coreml_model = coremltools.converters.keras.convert(model, input_names=['image'], image_input_names='image')
+
+coreml_model.author = 'Johnathan Chen'
+coreml_model.license = 'MIT'
+coreml_model.short_description = 'Predicts the handwritten character passed in as a number betweet 1-9.'
+coreml_model.input_description['image'] = ' A 28x28 pixel grayscale image.'
+coreml_model.output_description['output1'] = 'A Multiarray where the index with the greatest float value (0-1) is the recognized digit'
+
+coreml_model.save('/Users/Johnathan/Desktop/Handwriting.mlmodel')
